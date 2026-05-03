@@ -1,11 +1,12 @@
 <h1 align="center">📚 book-to-skill</h1>
 
 <p align="center">
-  <strong>Turn any technical book PDF into a Claude Code skill — ready to study, reference, and use while you work.</strong>
+  <strong>Turn any technical book (PDF or EPUB) into a Claude Code skill — ready to study, reference, and use while you work.</strong>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Claude_Code-Skill-blueviolet?style=for-the-badge" alt="Claude Code Skill">
+  <img src="https://img.shields.io/badge/PDF%20%2B%20EPUB-supported-green?style=for-the-badge" alt="PDF + EPUB">
   <img src="https://img.shields.io/badge/effort-high-orange?style=for-the-badge" alt="Effort: high">
   <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="MIT License">
 </p>
@@ -16,6 +17,7 @@
   <a href="#-usage">Usage</a> ·
   <a href="#-requirements">Requirements</a> ·
   <a href="#-how-it-works">How it works</a> ·
+  <a href="#-faq">FAQ</a> ·
   <a href="#-install">Install</a>
 </p>
 
@@ -30,7 +32,7 @@ The usual workarounds don't help:
 - 🧠 "I'll ask Claude about this book" → it either hallucinates or says it doesn't have the content
 - 📝 "I'll take notes as I read" → you end up with a 200-line doc you never open again
 
-**book-to-skill solves this by turning the PDF into a structured skill Claude loads on demand.**
+**book-to-skill solves this by turning the book into a structured skill Claude loads on demand.**
 
 Once installed, you just type `/your-book-slug replication` and Claude reads the right chapter and answers from the actual content. No hallucination. No digging through PDFs. The book becomes part of your workflow.
 
@@ -38,7 +40,7 @@ Once installed, you just type `/your-book-slug replication` and Claude reads the
 
 ## 📦 What it generates
 
-Running `/book-to-skill your-book.pdf` creates a full skill at `~/.claude/skills/<slug>/`:
+Running `/book-to-skill your-book.pdf` (or `.epub`) creates a full skill at `~/.claude/skills/<slug>/`:
 
 | File | Purpose | Size |
 |------|---------|------|
@@ -55,17 +57,17 @@ Running `/book-to-skill your-book.pdf` creates a full skill at `~/.claude/skills
 ## 🚀 Usage
 
 ```
-/book-to-skill <path-to-pdf> [skill-name-slug]
+/book-to-skill <path-to-pdf-or-epub> [skill-name-slug]
 ```
 
 **Examples:**
 
 ```bash
-# Derive skill name from filename
+# PDF — derive skill name from filename
 /book-to-skill ~/Downloads/designing-data-intensive-applications.pdf
 
-# Specify a custom slug
-/book-to-skill ~/books/clean-code.pdf clean-code
+# EPUB — specify a custom slug
+/book-to-skill ~/books/clean-code.epub clean-code
 
 # Full path with explicit name
 /book-to-skill /tmp/ddd-evans.pdf domain-driven-design
@@ -84,7 +86,9 @@ After the skill is created, use it like any other Claude Code skill:
 
 ## 🔧 Requirements
 
-At least one PDF extraction tool must be installed:
+At least one extraction tool must be installed.
+
+**For PDF:**
 
 | Tool | Install | Quality |
 |------|---------|---------|
@@ -92,33 +96,42 @@ At least one PDF extraction tool must be installed:
 | `PyPDF2` | `pip3 install PyPDF2` | ⭐⭐ Good |
 | `pdfminer.six` | `pip3 install pdfminer.six` | ⭐⭐ Good fallback |
 
-The extraction script tries them in order and uses the first available. If none is found, it tells you exactly which command to run.
+**For EPUB:**
+
+| Tool | Install | Quality |
+|------|---------|---------|
+| `ebooklib` + `beautifulsoup4` | `pip3 install ebooklib beautifulsoup4` | ⭐⭐⭐ Best |
+| stdlib `zipfile` | built-in — no install needed | ⭐⭐ Always available |
+
+The extraction script tries tools in order and uses the first available. If nothing is found, it tells you exactly which command to run.
 
 ---
 
 ## ⚙️ How it works
 
 ```
-PDF
- │
- ▼
-scripts/extract.py          ← tries pdftotext → PyPDF2 → pdfminer
- │
- ├── /tmp/book_skill_work/full_text.txt
- └── /tmp/book_skill_work/metadata.json
-          │
-          ▼
-     Claude analyzes structure
-     (title, author, chapters, ToC)
-          │
-          ▼
-     Generates per-chapter summaries  (800–1,200 tokens each)
-     Generates glossary, patterns, cheatsheet
-     Generates master SKILL.md with core mental models
-          │
-          ▼
-     ~/.claude/skills/<slug>/  ✅ written
-     /tmp/book_skill_work/     🗑️  cleaned up
+PDF or EPUB
+     │
+     ▼
+scripts/extract.py
+  PDF  → pdftotext → PyPDF2 → pdfminer
+  EPUB → ebooklib  → stdlib zipfile
+     │
+     ├── /tmp/book_skill_work/full_text.txt
+     └── /tmp/book_skill_work/metadata.json
+              │
+              ▼
+         Claude analyzes structure
+         (title, author, chapters, ToC)
+              │
+              ▼
+         Generates per-chapter summaries  (800–1,200 tokens each)
+         Generates glossary, patterns, cheatsheet
+         Generates master SKILL.md with core mental models
+              │
+              ▼
+         ~/.claude/skills/<slug>/  ✅ written
+         /tmp/book_skill_work/     🗑️  cleaned up
 ```
 
 <details>
@@ -131,6 +144,47 @@ scripts/extract.py          ← tries pdftotext → PyPDF2 → pdfminer
 5. **Never raw text** — always synthesize, summarize, extract signal from the source
 
 </details>
+
+---
+
+## ❓ FAQ
+
+**"Can't I just dump the PDF/EPUB into my Claude project context?"**
+
+You can — but every conversation will burn that token budget upfront. A 400-page book is ~200K tokens. With a skill, only the chapters relevant to your question load. The rest stays on disk until you need it.
+
+More importantly: raw text injection is retrieval. A skill is reasoning. When you load a chapter file, Claude isn't searching for keyword matches — it's working with pre-extracted named frameworks, principles, and mental models structured for application, not for reading.
+
+---
+
+**"Isn't this just RAG?"**
+
+RAG works at query time: chunk the book → embed everything → find similar vectors → inject into prompt. It's optimized for "find me the part that talks about X."
+
+book-to-skill works at compile time: one deep analysis run extracts the author's actual frameworks, names them, describes when to use each, captures the anti-patterns. The output is structure the author spent years building — not a similarity search over their sentences.
+
+RAG answers: *"here are chunks close to your query."*  
+A skill answers: *"here are the 12 frameworks this author built, ready to reason with."*
+
+For searching across 50+ books, RAG wins. For going deep on one book and using its frameworks while you work, a skill wins.
+
+---
+
+**"Popular books are already in Claude's training data. Why bother?"**
+
+For widely-known books (Clean Code, DDIA, Pragmatic Programmer), Claude has general knowledge — but it's compressed, averaged across the entire internet's discussion of the book, and may hallucinate specific quotes or chapter locations.
+
+book-to-skill works from your actual copy. Every framework name, every anti-pattern list, every chapter number is grounded in the text you provided. No training data drift, no hallucinated chapter titles.
+
+It also shines for books Claude doesn't know at all: niche technical references, internal company documentation, recent publications, translated works.
+
+---
+
+**"NotebookLM handles multiple books better."**
+
+Absolutely true — if your workflow is "I have 80 books and I want to search across all of them," NotebookLM is the right tool.
+
+book-to-skill is built for a different job: you want to go deep on one book and have its frameworks embedded in your coding or writing workflow, not in a separate browser tab. It's less "library search" and more "the author is sitting next to you while you work."
 
 ---
 
@@ -158,6 +212,8 @@ Then in any Claude Code session:
 
 ```bash
 /book-to-skill ~/path/to/your-book.pdf
+# or
+/book-to-skill ~/path/to/your-book.epub
 ```
 
 ---
@@ -168,7 +224,7 @@ Then in any Claude Code session:
 book-to-skill/
 ├── SKILL.md              # Skill definition + step-by-step instructions
 ├── scripts/
-│   └── extract.py        # PDF extraction (pdftotext / PyPDF2 / pdfminer)
+│   └── extract.py        # PDF + EPUB extraction (pdftotext / PyPDF2 / pdfminer / ebooklib / zipfile)
 └── README.md             # This file
 ```
 
