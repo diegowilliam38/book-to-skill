@@ -88,13 +88,16 @@ After the skill is created, use it like any other Claude Code skill:
 
 At least one extraction tool must be installed.
 
-**For PDF:**
+**For PDF — choose by book type:**
 
-| Tool | Install | Quality |
-|------|---------|---------|
-| `pdftotext` (poppler) | `sudo apt install poppler-utils` | ⭐⭐⭐ Best layout fidelity |
-| `PyPDF2` | `pip3 install PyPDF2` | ⭐⭐ Good |
-| `pdfminer.six` | `pip3 install pdfminer.six` | ⭐⭐ Good fallback |
+| Book type | Tool | Install | Speed |
+|-----------|------|---------|-------|
+| Text-heavy (prose, few tables) | `pdftotext` (poppler) | `sudo apt install poppler-utils` | ⚡ instant |
+| Text-heavy fallback | `PyPDF2` | `pip3 install PyPDF2` | ⚡ instant |
+| Text-heavy fallback | `pdfminer.six` | `pip3 install pdfminer.six` | ⚡ instant |
+| **Technical (code, tables, formulas)** | **`docling`** | `pip3 install docling` | ~1.5s/page |
+
+> Before extraction begins, the skill asks you whether the book is **technical** or **text-heavy** and picks the right tool automatically. Docling preserves markdown tables and code blocks; pdftotext is faster for prose-only books.
 
 **For EPUB:**
 
@@ -113,26 +116,39 @@ The extraction script tries tools in order and uses the first available. If noth
 PDF or EPUB
      │
      ▼
-scripts/extract.py
-  PDF  → pdftotext → PyPDF2 → pdfminer
-  EPUB → ebooklib  → stdlib zipfile
+Step 1.5 — "Technical or text-heavy book?"
+     │
+     ├── technical → Docling  (tables + code blocks as markdown, ~1.5s/page)
+     └── text      → pdftotext → PyPDF2 → pdfminer  (instant)
+     │
+     ▼
+scripts/extract.py --mode <technical|text>
+  EPUB → ebooklib → stdlib zipfile
      │
      ├── /tmp/book_skill_work/full_text.txt
      └── /tmp/book_skill_work/metadata.json
-              │
-              ▼
-         Claude analyzes structure
-         (title, author, chapters, ToC)
-              │
-              ▼
-         Generates per-chapter summaries  (800–1,200 tokens each)
-         Generates glossary, patterns, cheatsheet
-         Generates master SKILL.md with core mental models
-              │
-              ▼
-         ~/.claude/skills/<slug>/  ✅ written
-         /tmp/book_skill_work/     🗑️  cleaned up
+               │
+               ▼
+          Claude analyzes structure
+          (title, author, chapters, ToC)
+               │
+               ▼
+          Generates per-chapter summaries  (800–1,200 tokens each)
+          technical → includes Code Examples + Reference Tables sections
+          Generates glossary, patterns, cheatsheet
+          Generates master SKILL.md with core mental models
+               │
+               ▼
+          ~/.claude/skills/<slug>/  ✅ written
+          /tmp/book_skill_work/     🗑️  cleaned up
 ```
+
+**Extraction benchmark** (103-page technical book, CPU only):
+
+| Method | Time | Tokens | Tables | Code blocks |
+|--------|------|--------|--------|-------------|
+| pdftotext | 0.1s | 27K | 0 | 0 |
+| Docling | 164s | 27K (+1.2%) | 48 | 36 |
 
 <details>
 <summary>Design principles (click to expand)</summary>
