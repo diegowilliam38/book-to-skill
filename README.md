@@ -16,8 +16,6 @@
   <a href="https://github.com/sponsors/virgiliojr94"><img src="https://img.shields.io/github/sponsors/virgiliojr94?style=for-the-badge&color=ea4aaa&logo=githubsponsors&logoColor=white" alt="Sponsor"></a>
 </p>
 
-[![Trending Repos](https://trending-repos.com/badge/virgiliojr94/book-to-skill.svg)](https://trending-repos.com/repositories/virgiliojr94/book-to-skill)
-
 <p align="center">
   <a href="https://trendshift.io/repositories/27038" target="_blank"><img src="https://trendshift.io/api/badge/trendshift/repositories/27038/daily" alt="book-to-skill | Trendshift" width="250" height="55"></a>
 </p>
